@@ -1,5 +1,7 @@
 import { Download, Image as ImageIcon, Upload } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
+import ReactCrop, { Crop } from "react-image-crop";
+import "react-image-crop/dist/ReactCrop.css";
 import Frame1 from "./frame1.png";
 import Frame2 from "./frame2.png";
 import Frame3 from "./frame3.png";
@@ -33,16 +35,77 @@ function App() {
   const [selectedFrame, setSelectedFrame] = useState<string>("lynx-yellow");
   const [frameWidth, setFrameWidth] = useState(20);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [crop, setCrop] = useState<Crop>({
+    unit: "%",
+    width: 100,
+    height: 100,
+    x: 0,
+    y: 0,
+  });
+  const [originalImage, setOriginalImage] = useState<string | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setImage(e.target?.result as string);
+        setOriginalImage(e.target?.result as string);
+        setImage(null); // Clear the cropped image
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCropComplete = (crop: Crop) => {
+    if (!imgRef.current || !crop.width || !crop.height) return;
+
+    const canvas = document.createElement("canvas");
+    const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
+    const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
+
+    canvas.width = 460;
+    canvas.height = 460;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Create circular clipping path
+    ctx.beginPath();
+    ctx.arc(460 / 2, 460 / 2, 460 / 2, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Draw the cropped image
+    ctx.drawImage(
+      imgRef.current,
+      crop.x * scaleX,
+      crop.y * scaleY,
+      crop.width * scaleX,
+      crop.height * scaleY,
+      0,
+      0,
+      460,
+      460
+    );
+
+    setImage(canvas.toDataURL());
+  };
+
+  const onImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    const minSize = Math.min(width, height);
+
+    // Start with a circle that's 80% of the minimum dimension
+    const cropSize = minSize * 0.8;
+    const x = (width - cropSize) / 2;
+    const y = (height - cropSize) / 2;
+
+    setCrop({
+      unit: "px",
+      width: cropSize,
+      height: cropSize,
+      x: x,
+      y: y,
+    });
   };
 
   useEffect(() => {
@@ -130,6 +193,39 @@ function App() {
                   </label>
                 </div>
               </div>
+
+              {originalImage && !image && (
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Crop Image
+                  </label>
+                  <div className="overflow-hidden border border-gray-200 rounded-lg">
+                    <ReactCrop
+                      crop={crop}
+                      onChange={(c) => setCrop(c)}
+                      aspect={1}
+                      circularCrop
+                      minWidth={50}
+                      minHeight={50}
+                    >
+                      <img
+                        ref={imgRef}
+                        src={originalImage}
+                        className="max-w-full"
+                        alt="Upload"
+                        onLoad={onImageLoad}
+                      />
+                    </ReactCrop>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCropComplete(crop)}
+                    className="flex items-center justify-center w-full px-4 py-3 text-white transition-colors bg-indigo-600 rounded-lg hover:bg-indigo-700"
+                  >
+                    Apply Circle Crop
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-4">
                 <label className="block text-sm font-medium text-gray-700">
