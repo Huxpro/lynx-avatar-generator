@@ -32,8 +32,7 @@ const FRAMES = [
 
 function App() {
   const [image, setImage] = useState<string | null>(null);
-  const [selectedFrame, setSelectedFrame] = useState<string>("lynx-yellow");
-  const [frameWidth, setFrameWidth] = useState(20);
+  const [selectedFrame, setSelectedFrame] = useState<string>("frame1");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [crop, setCrop] = useState<Crop>({
     unit: "%",
@@ -130,10 +129,10 @@ function App() {
       // Clear canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw image
+      // Draw image with a slightly smaller clipping circle to account for frame padding
       ctx.save();
       ctx.beginPath();
-      ctx.arc(230, 230, 230 - frameWidth / 2, 0, Math.PI * 2);
+      ctx.arc(230, 230, 210, 0, Math.PI * 2); // Reduced from 230 to 210 to add padding
       ctx.clip();
       ctx.drawImage(img, startX, startY, size, size, 0, 0, 460, 460);
       ctx.restore();
@@ -146,7 +145,7 @@ function App() {
         ctx.drawImage(frameImg, 0, 0, 460, 460);
       };
     };
-  }, [image, selectedFrame, frameWidth]);
+  }, [image, selectedFrame]);
 
   const handleDownload = () => {
     if (!canvasRef.current) return;
@@ -250,20 +249,6 @@ function App() {
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div className="space-y-4">
-                <label className="block text-sm font-medium text-gray-700">
-                  Frame Width: {frameWidth}px
-                </label>
-                <input
-                  type="range"
-                  min="5"
-                  max="40"
-                  value={frameWidth}
-                  onChange={(e) => setFrameWidth(Number(e.target.value))}
-                  className="w-full"
-                />
               </div>
             </div>
 
